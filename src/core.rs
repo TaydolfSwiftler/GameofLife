@@ -1,6 +1,14 @@
 // Grid Wraps on the Edges
 // Use Vec for storing state
 // index(row, column, universe) = row * width(universe) + column
+use piston_window::*;
+use rand;
+use std::thread;
+use std::time::Duration;
+
+//Square size in Pixels, Distance to Window border in Pixels
+const SQUARE_SIZE: u32 = 10;
+const BORDER_DISTANCE: u32 = 1;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Cell {
     Dead = 0,
@@ -73,25 +81,89 @@ impl Universe {
             cells,
         }
     }
+
+    pub fn new_empty(height: u32, width: u32) -> Universe {
+        let cells = (0..height * width).map(|_| Cell::Dead).collect();
+        Universe {
+            height,
+            width,
+            iteration: 0,
+            cells,
+        }
+    }
+
+    pub fn new_random(height: u32, width: u32) -> Universe {
+        let cells = (0..height * width)
+            .map(|_| {
+                if rand::random() {
+                    Cell::Alive
+                } else {
+                    Cell::Dead
+                }
+            })
+            .collect();
+        Universe {
+            height,
+            width,
+            iteration: 0,
+            cells,
+        }
+    }
+
+    pub fn get_window(&mut self) {
+        let window_height: u32 = self.height * SQUARE_SIZE + (self.height + 1) * BORDER_DISTANCE;
+        let window_width: u32 = self.width * SQUARE_SIZE + (self.width + 1) * BORDER_DISTANCE;
+
+        let mut window: PistonWindow =
+            WindowSettings::new("Piston Window", (window_width, window_height))
+                .exit_on_esc(true)
+                .build()
+                .unwrap_or_else(|e| panic!("Failed to build PistonWindow: {}", e));
+
+        while let Some(e) = window.next() {
+            window.draw_2d(&e, |c, g, _d| {
+                clear([1.0, 1.0, 1.0, 1.0], g);
+                for row in 0..self.height {
+                    for col in 0..self.width {
+                        let idx = self.get_index(row, col);
+                        let color = match self.cells[idx] {
+                            Cell::Dead => [0.0, 0.0, 0.0, 0.25],
+                            Cell::Alive => [0.0, 0.0, 0.0, 1.0],
+                        };
+                        let square = rectangle::square(
+                            (col * SQUARE_SIZE + (col + 1) * BORDER_DISTANCE) as f64,
+                            (row * SQUARE_SIZE + (row + 1) * BORDER_DISTANCE) as f64,
+                            SQUARE_SIZE as f64,
+                        );
+                        rectangle(color, square, c.transform, g);
+                    }
+                }
+            });
+            self.tick();
+/*            if let Some(Button::Keyboard(Key::Space)) = e.press_args() {
+                self.tick();
+            }
+            if let Some(Button::Mouse(button)) = e.press_args() {
+                self.tick();
+
+            }*/
+        }
+    }
 }
 
 #[cfg(test)]
 #[test]
 fn test_live_neighbor_count() {
-    let mut universe = Universe {
+    let universe = Universe {
         height: 3,
         width: 3,
         iteration: 0,
+
+        #[rustfmt::skip]
         cells: vec![
-            Cell::Dead,
-            Cell::Alive,
-            Cell::Dead,
-            Cell::Dead,
-            Cell::Alive,
-            Cell::Dead,
-            Cell::Dead,
-            Cell::Alive,
-            Cell::Dead,
+            Cell::Dead,  Cell::Alive, Cell::Dead,
+            Cell::Dead,  Cell::Alive, Cell::Dead,
+            Cell::Dead,  Cell::Alive, Cell::Dead,
         ],
     };
 
@@ -122,44 +194,31 @@ fn test_tick() {
         height: 3,
         width: 3,
         iteration: 0,
+        #[rustfmt::skip]
         cells: vec![
-            Cell::Dead,
-            Cell::Alive,
-            Cell::Dead,
-            Cell::Dead,
-            Cell::Alive,
-            Cell::Dead,
-            Cell::Dead,
-            Cell::Alive,
-            Cell::Dead,
+            Cell::Dead,  Cell::Alive, Cell::Dead,
+            Cell::Dead,  Cell::Alive, Cell::Dead,
+            Cell::Dead,  Cell::Alive, Cell::Dead,
         ],
     };
 
     universe.tick();
-    let mut expected_cells = vec![
-        Cell::Alive,
-        Cell::Alive,
-        Cell::Alive,
-        Cell::Alive,
-        Cell::Alive,
-        Cell::Alive,
-        Cell::Alive,
-        Cell::Alive,
-        Cell::Alive,
+
+    #[rustfmt::skip]
+    let expected_cells = vec![
+        Cell::Alive, Cell::Alive, Cell::Alive,
+        Cell::Alive, Cell::Alive, Cell::Alive,
+        Cell::Alive, Cell::Alive, Cell::Alive,
     ];
     assert_eq!(universe.cells, expected_cells);
 
     universe.tick();
-    expected_cells = vec![
-        Cell::Dead,
-        Cell::Dead,
-        Cell::Dead,
-        Cell::Dead,
-        Cell::Dead,
-        Cell::Dead,
-        Cell::Dead,
-        Cell::Dead,
-        Cell::Dead,
+
+    #[rustfmt::skip]
+    let expected_cells = vec![
+        Cell::Dead, Cell::Dead, Cell::Dead,
+        Cell::Dead, Cell::Dead, Cell::Dead,
+        Cell::Dead, Cell::Dead, Cell::Dead,
     ];
     assert_eq!(universe.cells, expected_cells);
 }
