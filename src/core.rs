@@ -139,14 +139,13 @@ impl Universe {
                     }
                 }
             });
-            self.tick();
-/*            if let Some(Button::Keyboard(Key::Space)) = e.press_args() {
+            if let Some(Button::Keyboard(Key::Space)) = e.press_args() {
                 self.tick();
             }
             if let Some(Button::Mouse(button)) = e.press_args() {
                 self.tick();
 
-            }*/
+            }
         }
     }
 }
